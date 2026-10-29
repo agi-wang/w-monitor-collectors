@@ -4,7 +4,7 @@ Read-only Rust host collection shared by [W Monitor Public](https://github.com/a
 
 The library contains CPU, memory, disk capacity and I/O, GPU, temperatures, process summaries, network interfaces and connection observations, and mount state. It returns the existing JSON collector shapes and uses the caller's `sysinfo` snapshots and rate caches. Scheduling, identities, reporting transports and application configuration belong to each consumer.
 
-There is no command dispatcher, control listener, remote terminal/file operation, privilege escalation, installer or automatic updater. Local diagnostic subprocesses use fixed read-only queries with bounded output, deadlines and process-group cleanup. Mount health reads kernel/service snapshots without probing potentially blocked mount points. This crate depends only on `sysinfo`, `parking_lot`, `serde_json` and `libc`.
+There is no command dispatcher, control listener, remote terminal/file operation, privilege escalation, installer or automatic updater. Local diagnostic subprocesses use fixed read-only queries with bounded output, deadlines and process-group cleanup. Mount health reads kernel/service snapshots without probing potentially blocked mount points. This crate depends only on `sysinfo`, `parking_lot`, `serde_json`, `libc` and `sha2` (stable temperature sensor identifiers).
 
 ## Network accounting
 
