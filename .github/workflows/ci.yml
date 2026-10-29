@@ -34,3 +34,56 @@ jobs:
           assert all('git.aiot.ml' not in (p.get('source') or '') for p in metadata['packages'])
           print('Standalone read-only dependency boundary verified')
           PY
+  release:
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'agi-wang/w-monitor-collectors'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Publish immutable source package after checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
+          test "$RELEASE_TAG" = "v$version"
+          git merge-base --is-ancestor HEAD origin/main
+          cargo package --locked --no-verify
+          artifact="w-monitor-collectors-$version.crate"
+          cd target/package
+          sha256sum "$artifact" > "$artifact.sha256"
+          python3 - <<'PY'
+          import json, os, urllib.error, urllib.request
+          url = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY'] + '/releases/tags/' + os.environ['RELEASE_TAG']
+          request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'User-Agent': 'w-monitor-collectors-release'})
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  release = json.load(response)
+              assert not release['draft'] and not release['prerelease']
+              exists = True
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              exists = False
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RELEASE_EXISTS=' + str(exists).lower() + '\n')
+          with open(os.environ['RUNNER_TEMP'] + '/existing-release.json', 'w') as output:
+              json.dump(exists, output)
+          PY
+          if test "$(cat "$RUNNER_TEMP/existing-release.json")" = true; then
+            mkdir "$RUNNER_TEMP/release-readback"
+            gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-readback"
+            test "$(find "$RUNNER_TEMP/release-readback" -type f | wc -l)" -eq 2
+            cmp "$artifact" "$RUNNER_TEMP/release-readback/$artifact"
+            cmp "$artifact.sha256" "$RUNNER_TEMP/release-readback/$artifact.sha256"
+          else
+            gh release create "$RELEASE_TAG" "$artifact" "$artifact.sha256" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes 'Shared read-only collectors. Consumers independently validate the immutable source revision before releasing.' --latest
+          fi
