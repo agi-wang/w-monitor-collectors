@@ -420,13 +420,23 @@ fn default_network_interfaces() -> std::collections::BTreeSet<String> {
         let mut lower = std::collections::BTreeSet::new();
         for name in &selected {
             let path = std::path::Path::new("/sys/class/net").join(name);
-            if let Ok(master) = std::fs::read_link(path.join("master")) {
-                if master
-                    .file_name()
-                    .is_some_and(|name| selected.contains(&name.to_string_lossy().to_string()))
-                {
+            let mut current = name.clone();
+            for _ in 0..8 {
+                let Ok(master) = std::fs::read_link(
+                    std::path::Path::new("/sys/class/net")
+                        .join(&current)
+                        .join("master"),
+                ) else {
+                    break;
+                };
+                let Some(parent) = master.file_name().and_then(|value| value.to_str()) else {
+                    break;
+                };
+                if selected.contains(parent) {
                     lower.insert(name.clone());
+                    break;
                 }
+                current = parent.to_owned();
             }
             if let Ok(entries) = std::fs::read_dir(&path) {
                 for entry in entries.flatten() {
