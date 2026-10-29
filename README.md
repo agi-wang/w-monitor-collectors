@@ -23,6 +23,25 @@ Use `hardware`, `traffic` and `mount_health` modules directly. Existing Private 
 
 Changing this library does not update either deployed product. Each consumer explicitly updates its pin and lockfile, runs its own checks, and releases independently. Private keeps its control/update layer; Public keeps its read-only Agent and manual-update policy.
 
+## Consumer updates
+
+Publish a stable `vMAJOR.MINOR.PATCH` tag matching `Cargo.toml` on the reviewed main
+history. Tag CI verifies the read-only dependency boundary before publishing the
+immutable source package and checksum. A main-branch push alone does not request
+consumer updates; existing release assets are never overwritten.
+
+Each consumer independently checks published stable releases. Its automation pins
+the exact checked commit, opens a dependency PR with the product's next patch
+version, and waits for that consumer's complete CI. Only an unchanged,
+automation-owned dependency PR is eligible for automatic merge and release.
+Private retains its separate signed release and deployment transaction; Public
+retains its static builds and regional deployment workflow. A failed check or
+unexpected edit stops that consumer without blocking the other. Public Agents
+still update only through a user's manual installation command.
+
+The public library never receives Private repository or deployment credentials.
+Consumer schedules also recover missed events without a cross-forge webhook.
+
 ## Checks
 
 Rust is pinned in `rust-toolchain.toml`. Run `cargo fmt --all --check`, `cargo clippy --locked --all-targets -- -D warnings`, `cargo check --locked --target x86_64-unknown-linux-musl`, and `cargo package --locked --no-verify`. GitHub CI also checks the dependency boundary. No application deployment is attached to this repository.
