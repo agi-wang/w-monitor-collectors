@@ -44,4 +44,4 @@ Consumer schedules also recover missed events without a cross-forge webhook.
 
 ## Checks
 
-Rust is pinned in `rust-toolchain.toml`. Run `cargo fmt --all --check`, `cargo clippy --locked --all-targets -- -D warnings`, `cargo check --locked --target x86_64-unknown-linux-musl`, and `cargo package --locked --no-verify`. GitHub CI also checks the dependency boundary. No application deployment is attached to this repository.
+The canonical source and contribution workflow are at [agi-wang/w-monitor-collectors](https://github.com/agi-wang/w-monitor-collectors). Submit changes through GitHub pull requests. Rust is pinned in `rust-toolchain.toml`. GitHub Actions runs `cargo fmt --all --check`, `cargo clippy --locked --all-targets -- -D warnings`, `cargo check --locked --target x86_64-unknown-linux-musl`, `cargo package --locked --no-verify`, and the dependency boundary check on pull requests and `main`. Keep local checkouts limited to source editing and metadata checks. No application deployment is attached to this repository.
